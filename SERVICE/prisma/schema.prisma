@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CompanyAuth {
+  companyAuthId      String   @id @default(uuid())
+  adminEmail         String   @unique
+  verificationStatus Boolean  @default(false)
+  createdDate        DateTime @default(now())
+  token              String?
+}
+
+model CompanyProfile {
+  companyId      String @id @default(uuid())
+  name           String
+  company        String
+  longTermGoals  String
+  philosophy     String
+  avoid          String
+  perform        String
+  shortTermGoals String
+
+  administrators CompanyAdministrator[]
+  employees      CompanyEmployee[]
+  sops           CompanySOP[]
+}
+
+model CompanyAdministrator {
+  companyAdministratorId String         @id @default(uuid())
+  companyId              String
+  company                CompanyProfile @relation(fields: [companyId], references: [companyId])
+
+  name   String
+  type   String
+  number String
+  email  String @unique
+  role   String
+
+  employees CompanyEmployee[] @relation("AdminEmployees")
+}
+
+model CompanyEmployee {
+  companyEmployeeId String @id @default(uuid())
+  companyId         String
+  administratorId   String
+
+  company       CompanyProfile       @relation(fields: [companyId], references: [companyId])
+  administrator CompanyAdministrator @relation("AdminEmployees", fields: [administratorId], references: [companyAdministratorId])
+
+  name   String
+  email  String @unique
+  number String
+  role   String
+
+  employeeAnalyses SopEmployeeAnalysis[]
+  assignments      CompanySOPAssignment[]
+}
+
+model CompanySOP {
+  sopId     String @id @default(uuid())
+  companyId String
+
+  name        String
+  description String
+  duration    String
+  goals       String
+  avoid       String
+  perform     String
+
+  company  CompanyProfile @relation(fields: [companyId], references: [companyId])
+  sopSteps SOPSteps[]
+  analyses SopAnalysis[]
+}
+
+model SOPSteps {
+  sopStepId String @id @default(uuid())
+  sopId     String
+
+  stepCount       Int
+  stepDescription String
+  stepDos         String
+  stepsDonts      String
+
+  sop         CompanySOP             @relation(fields: [sopId], references: [sopId])
+  assignments CompanySOPAssignment[]
+  taskLogs    SOPTaskLogs[]
+}
+
+model CompanySOPAssignment {
+  sopStepId  String
+  employeeId String
+  assignedAt DateTime @default(now())
+
+  sopStep  SOPSteps        @relation(fields: [sopStepId], references: [sopStepId])
+  employee CompanyEmployee @relation(fields: [employeeId], references: [companyEmployeeId])
+
+  @@id([sopStepId, employeeId])
+}
+
+model SOPTaskLogs {
+  logId     String @id @default(uuid())
+  sopStepId String
+
+  approach      String
+  resolveStatus String
+  achievements  String
+  problems      String?
+
+  sopStep  SOPSteps         @relation(fields: [sopStepId], references: [sopStepId])
+  analyses SopLogAnalysis[]
+}
+
+model SopAnalysis {
+  analysisId String @id @default(uuid())
+  sopId      String
+
+  sop CompanySOP @relation(fields: [sopId], references: [sopId])
+
+  suggestion String
+  good       String
+  bad        String
+}
+
+model SopLogAnalysis {
+  analysisId String @id @default(uuid())
+  logId      String
+
+  log SOPTaskLogs @relation(fields: [logId], references: [logId])
+
+  suggestions String
+  good        String
+  bad         String
+}
+
+model SopEmployeeAnalysis {
+  analysisId String @id @default(uuid())
+  employeeId String
+
+  employee CompanyEmployee @relation(fields: [employeeId], references: [companyEmployeeId])
+
+  suggestions String
+  good        String
+  bad         String
+}
